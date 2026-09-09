@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WAVE — Music</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0b0d;color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding-bottom:128px}
+header{height:64px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(11,11,13,.88);backdrop-filter:blur(18px);z-index:5}
+.brand{font-size:24px;font-weight:900;letter-spacing:-1px}
+.brand span{color:#a78bfa}
+.icon{border:0;background:#1b1b20;color:white;width:38px;height:38px;border-radius:50%;font-size:16px}
+.hero{padding:32px 18px 26px;background:radial-gradient(circle at 85% 15%,#34205d 0,transparent 38%),linear-gradient(180deg,#15111d,#0b0b0d)}
+.eyebrow{font-size:11px;letter-spacing:3px;color:#9d9da5;font-weight:700;margin:0}
+.hero h1{font-size:44px;line-height:.98;letter-spacing:-2px;margin:10px 0 26px}
+.hero h1 span{color:#a78bfa}
+.search{height:48px;border-radius:14px;background:#1a1a1f;display:flex;align-items:center;padding:0 14px;gap:9px}
+.search span{font-size:25px;color:#999}
+.search input{flex:1;background:none;border:0;outline:0;color:white;font-size:15px}
+.search input::placeholder{color:#777}
+.sectionHead{display:flex;align-items:center;justify-content:space-between;padding:24px 18px 12px}
+.sectionHead h2{font-size:20px;margin:0}
+.sectionHead button{border:0;background:none;color:#a78bfa;font-weight:700}
+.tracks{padding:0 12px}
+.track{display:flex;align-items:center;gap:12px;padding:9px 6px;border-radius:14px;cursor:pointer}
+.track:active{background:#19191e}
+.track.active{background:#19191e}
+.track.active .meta b{color:#a78bfa}
+.cover{width:52px;height:52px;border-radius:10px;background:linear-gradient(135deg,#a78bfa,#27202f);flex:none;display:grid;place-items:center;font-weight:900}
+.meta{flex:1;min-width:0}
+.meta b,.meta span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta b{font-size:15px}
+.meta span{font-size:12px;color:#85858e;margin-top:4px}
+.duration{color:#666;font-size:12px}
+.more{background:none;border:0;color:#777;font-size:20px}
+.artists{display:flex;gap:18px;overflow:auto;padding:0 18px}
+.artist{min-width:76px;text-align:center;cursor:pointer}
+.avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#27202f);display:grid;place-items:center;font-weight:900;font-size:22px;margin:0 auto 8px}
+.artist span{font-size:12px;color:#c8c8cf}
+
+.player{position:fixed;left:10px;right:10px;bottom:12px;border-radius:18px;background:rgba(26,22,34,.92);backdrop-filter:blur(20px);border:1px solid #2a2333;padding:10px 12px;z-index:9;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.player.hidden{display:none}
+.player .top{display:flex;align-items:center;gap:12px}
+.player .cover{width:46px;height:46px}
+.pinfo{flex:1;min-width:0}
+.pinfo b,.pinfo span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pinfo b{font-size:14px}
+.pinfo span{font-size:12px;color:#9a9aa2;margin-top:2px}
+.ctrls{display:flex;align-items:center;gap:6px}
+.ctrl{border:0;background:none;color:#e7e7ea;font-size:16px;width:34px;height:34px;border-radius:50%}
+.ctrl:active{background:#2a2333}
+.play{border:0;background:#a78bfa;color:#0b0b0d;width:44px;height:44px;border-radius:50%;font-size:16px;font-weight:900}
+.progress{display:flex;align-items:center;gap:8px;margin-top:8px}
+.progress .t{font-size:11px;color:#8a8a92;font-variant-numeric:tabular-nums;min-width:34px;text-align:center}
+.bar{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:#3a3342;outline:none}
+.bar::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#a78bfa;cursor:pointer}
+.bar::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:#a78bfa;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">WAVE<span>.</span></div>
+  <button id="profileBtn" class="icon" aria-label="Профиль">◉</button>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">YOUR MUSIC</p>
+    <h1>Слушай.<br><span>Чувствуй.</span></h1>
+    <div class="search"><span aria-hidden="true">⌕</span><input id="search" placeholder="Найти трек или артиста" aria-label="Поиск"></div>
+  </section>
+
+  <section>
+    <div class="sectionHead"><h2>Популярное</h2><button id="allBtn">Все</button></div>
+    <div id="tracks" class="tracks"></div>
+  </section>
+
+  <section>
+    <div class="sectionHead"><h2>Артисты</h2></div>
+    <div id="artists" class="artists"></div>
+  </section>
+</main>
+
+<div id="player" class="player hidden">
+  <div class="top">
+    <div id="playerCover" class="cover"></div>
+    <div class="pinfo"><b id="pTitle">—</b><span id="pArtist">—</span></div>
+    <div class="ctrls">
+      <button id="prev" class="ctrl" aria-label="Предыдущий">⏮</button>
+      <button id="play" class="play" aria-label="Воспроизвести">▶</button>
+      <button id="next" class="ctrl" aria-label="Следующий">⏭</button>
+    </div>
+  </div>
+  <div class="progress">
+    <span id="cur" class="t">0:00</span>
+    <input id="bar" class="bar" type="range" min="0" max="100" value="0" step="0.1" aria-label="Перемотка">
+    <span id="dur" class="t">0:00</span>
+  </div>
+</div>
+
+<audio id="audio" preload="metadata"></audio>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+const tg=window.Telegram?.WebApp; tg?.ready(); tg?.expand();
+
+// Реальные ссылки на аудио. Замените url на свои файлы треков.
+const tracks=[
+ {title:"Говоритель хуйни",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
+ {title:"На адвоката",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"},
+ {title:"Никогда",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"},
+ {title:"Скам",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"},
+ {title:"I Love My Opps",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"},
+ {title:"Мои уличные девочки",artist:"4n Way",cover:"4",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"}
+];
+const artists=[...new Set(tracks.map(x=>x.artist))];
+const $=s=>document.querySelector(s);
+const audio=$("#audio");
+let current=null;
+
+const fmt=s=>{ if(!isFinite(s))return"0:00"; s=Math.floor(s); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
+
+function render(list=tracks){
+ $("#tracks").innerHTML=list.map(t=>{const i=tracks.indexOf(t);return `<div class="track${i===current?" active":""}" data-i="${i}"><div class="cover">${t.cover}</div><div class="meta"><b>${t.title}</b><span>${t.artist}</span></div><span class="duration" data-dur="${i}">—</span><button class="more" aria-label="Ещё">⋮</button></div>`}).join("");
+ document.querySelectorAll(".track").forEach(x=>x.onclick=e=>{ if(e.target.classList.contains("more"))return; playTrack(+x.dataset.i); });
+}
+function renderArtists(){
+ $("#artists").innerHTML=artists.map(a=>`<div class="artist"><div class="avatar">${a[0]}</div><span>${a}</span></div>`).join("");
+}
+
+function playTrack(i){
+ current=i;
+ const t=tracks[i];
+ audio.src=t.url;
+ audio.play().catch(()=>{});
+ $("#player").classList.remove("hidden");
+ $("#pTitle").textContent=t.title;
+ $("#pArtist").textContent=t.artist;
+ $("#playerCover").textContent=t.cover;
+ render();
+ tg?.HapticFeedback?.impactOccurred("light");
+}
+
+function togglePlay(){
+ if(current===null){ playTrack(0); return; }
+ if(audio.paused) audio.play().catch(()=>{}); else audio.pause();
+}
+
+$("#play").onclick=togglePlay;
+$("#prev").onclick=()=>playTrack((current-1+tracks.length)%tracks.length);
+$("#next").onclick=()=>playTrack((current+1)%tracks.length);
+
+audio.addEventListener("play",()=>$("#play").textContent="❚❚");
+audio.addEventListener("pause",()=>$("#play").textContent="▶");
+audio.addEventListener("ended",()=>$("#next").click());
+audio.addEventListener("loadedmetadata",()=>{ $("#dur").textContent=fmt(audio.duration); });
+audio.addEventListener("timeupdate",()=>{
+ $("#cur").textContent=fmt(audio.currentTime);
+ if(audio.duration) $("#bar").value=(audio.currentTime/audio.duration)*100;
+});
+$("#bar").addEventListener("input",e=>{ if(audio.duration) audio.currentTime=(e.target.value/100)*audio.duration; });
+
+// Подгрузка длительностей для списка треков
+tracks.forEach((t,i)=>{
+ const a=new Audio(); a.preload="metadata"; a.src=t.url;
+ a.addEventListener("loadedmetadata",()=>{ const el=document.querySelector(`[data-dur="${i}"]`); if(el)el.textContent=fmt(a.duration); });
+});
+
+$("#search").oninput=e=>{const q=e.target.value.toLowerCase();render(tracks.filter(t=>(t.title+" "+t.artist).toLowerCase().includes(q)))};
+$("#allBtn").onclick=()=>{$("#search").value="";render(tracks)};
+$("#profileBtn").onclick=()=>tg?.showAlert?.("Профиль и авторизация добавим следующим этапом.");
+
+render();renderArtists();
+</script>
+</body>
+</html>
