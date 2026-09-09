@@ -62,7 +62,10 @@ header{height:64px;padding:0 18px;display:flex;align-items:center;justify-conten
 <body>
 <header>
   <div class="brand">Rx7ezz Music<span>.</span></div>
-  <button id="profileBtn" class="icon" aria-label="Профиль">◉</button>
+  <div style="display:flex;gap:8px">
+    <button id="syncBtn" class="icon" aria-label="Обновить">↻</button>
+    <button id="profileBtn" class="icon" aria-label="Профиль">◉</button>
+  </div>
 </header>
 
 <main>
@@ -106,47 +109,49 @@ header{height:64px;padding:0 18px;display:flex;align-items:center;justify-conten
 <script>
 const tg=window.Telegram?.WebApp; tg?.ready(); tg?.expand();
 
-// Треки. Каждый объект: {title, artist, cover:"буква", url:"прямая ссылка на mp3"}.
-// Добавляй реальные треки сюда — из Telegram-канала (через Bot API getFile) или любого прямого URL.
-const tracks=[];
-const artists=[...new Set(tracks.map(x=>x.artist))];
+// Треки подгружаются из Telegram-канала через бэкенд (/api/tracks).
+let tracks=[];
+let artists=[];
 const $=s=>document.querySelector(s);
 const audio=$("#audio");
 let current=null;
 
 const fmt=s=>{ if(!isFinite(s))return"0:00"; s=Math.floor(s); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
+const letter=s=>(s||"?").trim().charAt(0).toUpperCase()||"?";
+const coverHtml=t=>t.thumb_file_id?`<img src="/api/thumb/${t.id}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`:letter(t.title);
 
 function render(list=tracks){
- if(!list.length){ $("#tracks").innerHTML=`<div class="empty">Пока нет треков. Добавь музыку из своего Telegram-канала.</div>`; return; }
- $("#tracks").innerHTML=list.map(t=>{const i=tracks.indexOf(t);return `<div class="track${i===current?" active":""}" data-i="${i}"><div class="cover">${t.cover}</div><div class="meta"><b>${t.title}</b><span>${t.artist}</span></div><span class="duration" data-dur="${i}">—</span><button class="more" aria-label="Ещё">⋮</button></div>`}).join("");
+ if(!list.length){ $("#tracks").innerHTML=`<div class="empty">Пока нет треков. Загрузи музыку в Telegram-канал (бот должен быть админом) и нажми ↻ вверху.</div>`; return; }
+ $("#tracks").innerHTML=list.map(t=>{const i=tracks.indexOf(t);return `<div class="track${i===current?" active":""}" data-i="${i}"><div class="cover">${coverHtml(t)}</div><div class="meta"><b>${t.title}</b><span>${t.artist}</span></div><span class="duration">${fmt(t.duration)}</span><button class="more" aria-label="Ещё">⋮</button></div>`}).join("");
  document.querySelectorAll(".track").forEach(x=>x.onclick=e=>{ if(e.target.classList.contains("more"))return; playTrack(+x.dataset.i); });
 }
 function renderArtists(){
- if(!artists.length){ $("#artists").innerHTML=`<div class="empty" style="padding:0 6px">—</div>`; return; }
- $("#artists").innerHTML=artists.map(a=>`<div class="artist"><div class="avatar">${a[0]}</div><span>${a}</span></div>`).join("");
+ if(!artists.length){ $("#artists").innerHTML=""; return; }
+ $("#artists").innerHTML=artists.map(a=>`<div class="artist"><div class="avatar">${letter(a)}</div><span>${a}</span></div>`).join("");
 }
 
 function playTrack(i){
  current=i;
  const t=tracks[i];
- audio.src=t.url;
+ audio.src=`/api/stream/${t.id}`;
  audio.play().catch(()=>{});
  $("#player").classList.remove("hidden");
  $("#pTitle").textContent=t.title;
  $("#pArtist").textContent=t.artist;
- $("#playerCover").textContent=t.cover;
+ $("#playerCover").innerHTML=coverHtml(t);
  render();
  tg?.HapticFeedback?.impactOccurred("light");
 }
 
 function togglePlay(){
+ if(!tracks.length)return;
  if(current===null){ playTrack(0); return; }
  if(audio.paused) audio.play().catch(()=>{}); else audio.pause();
 }
 
 $("#play").onclick=togglePlay;
-$("#prev").onclick=()=>playTrack((current-1+tracks.length)%tracks.length);
-$("#next").onclick=()=>playTrack((current+1)%tracks.length);
+$("#prev").onclick=()=>{ if(tracks.length)playTrack((current-1+tracks.length)%tracks.length); };
+$("#next").onclick=()=>{ if(tracks.length)playTrack((current+1)%tracks.length); };
 
 audio.addEventListener("play",()=>$("#play").textContent="❚❚");
 audio.addEventListener("pause",()=>$("#play").textContent="▶");
@@ -158,17 +163,34 @@ audio.addEventListener("timeupdate",()=>{
 });
 $("#bar").addEventListener("input",e=>{ if(audio.duration) audio.currentTime=(e.target.value/100)*audio.duration; });
 
-// Подгрузка длительностей для списка треков
-tracks.forEach((t,i)=>{
- const a=new Audio(); a.preload="metadata"; a.src=t.url;
- a.addEventListener("loadedmetadata",()=>{ const el=document.querySelector(`[data-dur="${i}"]`); if(el)el.textContent=fmt(a.duration); });
-});
+async function loadTracks(){
+ try{
+  const res=await fetch("/api/tracks");
+  const data=await res.json();
+  tracks=data.tracks||[];
+  artists=[...new Set(tracks.map(x=>x.artist))];
+  render();renderArtists();
+ }catch(e){ $("#tracks").innerHTML=`<div class="empty">Не удалось загрузить треки.</div>`; }
+}
 
+async function sync(){
+ const btn=$("#syncBtn");
+ btn.disabled=true; btn.textContent="…";
+ try{
+  const res=await fetch("/api/sync",{method:"POST"});
+  const data=await res.json();
+  if(!res.ok){ tg?.showAlert?.(data.error||"Ошибка синхронизации"); }
+  else{ await loadTracks(); tg?.showAlert?.(`Добавлено новых треков: ${data.added}`); }
+ }catch(e){ tg?.showAlert?.("Ошибка сети"); }
+ finally{ btn.disabled=false; btn.textContent="↻"; }
+}
+
+$("#syncBtn").onclick=sync;
 $("#search").oninput=e=>{const q=e.target.value.toLowerCase();render(tracks.filter(t=>(t.title+" "+t.artist).toLowerCase().includes(q)))};
 $("#allBtn").onclick=()=>{$("#search").value="";render(tracks)};
 $("#profileBtn").onclick=()=>tg?.showAlert?.("Профиль и авторизация добавим следующим этапом.");
 
-render();renderArtists();
+loadTracks();
 </script>
 </body>
 </html>
