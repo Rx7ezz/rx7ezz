@@ -38,6 +38,7 @@ header{height:64px;padding:0 18px;display:flex;align-items:center;justify-conten
 .artist{min-width:76px;text-align:center;cursor:pointer}
 .avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#27202f);display:grid;place-items:center;font-weight:900;font-size:22px;margin:0 auto 8px}
 .artist span{font-size:12px;color:#c8c8cf}
+.empty{padding:24px 12px;color:#7a7a82;font-size:14px;text-align:center;line-height:1.5}
 
 .player{position:fixed;left:10px;right:10px;bottom:12px;border-radius:18px;background:rgba(26,22,34,.92);backdrop-filter:blur(20px);border:1px solid #2a2333;padding:10px 12px;z-index:9;box-shadow:0 12px 40px rgba(0,0,0,.5)}
 .player.hidden{display:none}
@@ -105,15 +106,9 @@ header{height:64px;padding:0 18px;display:flex;align-items:center;justify-conten
 <script>
 const tg=window.Telegram?.WebApp; tg?.ready(); tg?.expand();
 
-// Реальные ссылки на аудио. Замените url на свои файлы треков.
-const tracks=[
- {title:"Говоритель хуйни",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
- {title:"На адвоката",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"},
- {title:"Никогда",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"},
- {title:"Скам",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"},
- {title:"I Love My Opps",artist:"Heronwater",cover:"H",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"},
- {title:"Мои уличные девочки",artist:"4n Way",cover:"4",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"}
-];
+// Треки. Каждый объект: {title, artist, cover:"буква", url:"прямая ссылка на mp3"}.
+// Добавляй реальные треки сюда — из Telegram-канала (через Bot API getFile) или любого прямого URL.
+const tracks=[];
 const artists=[...new Set(tracks.map(x=>x.artist))];
 const $=s=>document.querySelector(s);
 const audio=$("#audio");
@@ -122,10 +117,12 @@ let current=null;
 const fmt=s=>{ if(!isFinite(s))return"0:00"; s=Math.floor(s); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
 
 function render(list=tracks){
+ if(!list.length){ $("#tracks").innerHTML=`<div class="empty">Пока нет треков. Добавь музыку из своего Telegram-канала.</div>`; return; }
  $("#tracks").innerHTML=list.map(t=>{const i=tracks.indexOf(t);return `<div class="track${i===current?" active":""}" data-i="${i}"><div class="cover">${t.cover}</div><div class="meta"><b>${t.title}</b><span>${t.artist}</span></div><span class="duration" data-dur="${i}">—</span><button class="more" aria-label="Ещё">⋮</button></div>`}).join("");
  document.querySelectorAll(".track").forEach(x=>x.onclick=e=>{ if(e.target.classList.contains("more"))return; playTrack(+x.dataset.i); });
 }
 function renderArtists(){
+ if(!artists.length){ $("#artists").innerHTML=`<div class="empty" style="padding:0 6px">—</div>`; return; }
  $("#artists").innerHTML=artists.map(a=>`<div class="artist"><div class="avatar">${a[0]}</div><span>${a}</span></div>`).join("");
 }
 
